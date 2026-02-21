@@ -148,29 +148,16 @@ public class InvoiceService : IInvoiceService
                 i.Comment.ToLower().Contains(searchTerm));
         }
 
-        query = invoiceQueryParams.Sort switch
-        {
-            "name" => invoiceQueryParams.SortDirection == "desc" 
-                                                             ? query.OrderByDescending(i => i.Customer.Name) 
-                                                             : query.OrderBy(i => i.Customer.Name),
-
-            "comment" => invoiceQueryParams.SortDirection == "desc" 
-                                                              ? query.OrderByDescending(i => i.Comment) 
-                                                              : query.OrderBy(i => i.Comment),
-              _ => query.OrderBy(i => i.Id)
-        };
-
         if (!string.IsNullOrWhiteSpace(invoiceQueryParams.Sort))
             query = ApplySorting(query, invoiceQueryParams.Sort, invoiceQueryParams.SortDirection);
         else
             query = query.OrderBy(i => i.Id);
 
-        var totalCount = query.Count();
+        var totalCount = await query.CountAsync();
 
         var skip = (invoiceQueryParams.Page - 1) * invoiceQueryParams.PageSize;
 
         var invoices = await query
-                                .Where(i => i.DeletedAt == null)
                                 .Skip(skip)
                                 .Take(invoiceQueryParams.PageSize)
                                 .ToListAsync();

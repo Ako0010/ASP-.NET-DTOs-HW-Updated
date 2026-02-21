@@ -83,7 +83,9 @@ public class CustomerService : ICustomerService
     {
         customerQueryParams.Validate();
 
-        var query = _context.Customers.Include(c=> c.Invoices).AsQueryable();
+        var query = _context.Customers
+                             .Where(c => c.DeletedAt == null)
+                             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(customerQueryParams.Search))
         {
@@ -92,17 +94,6 @@ public class CustomerService : ICustomerService
             c.Name.ToLower().Contains(searchTerm) || 
             c.Email.ToLower().Contains(searchTerm));
         }
-
-        query = customerQueryParams.Sort switch
-        {
-            "name" => customerQueryParams.SortDirection == "desc" 
-                                                              ? query.OrderByDescending(c => c.Name) 
-                                                              : query.OrderBy(c => c.Name),
-            "email" => customerQueryParams.SortDirection == "desc" 
-                                                              ? query.OrderByDescending(c => c.Email) 
-                                                              : query.OrderBy(c => c.Email),
-            _ => query.OrderBy(c => c.Id)
-        };
 
         if (!string.IsNullOrWhiteSpace(customerQueryParams.Sort))
             query = ApplySorting(query, customerQueryParams.Sort, customerQueryParams.SortDirection);
@@ -114,7 +105,6 @@ public class CustomerService : ICustomerService
         var skip = (customerQueryParams.Page - 1) * customerQueryParams.PageSize;
 
         var customers = await query
-            .Where(c => c.DeletedAt == null)
             .Skip(skip)
             .Take(customerQueryParams.PageSize)
             .ToListAsync();
@@ -137,6 +127,10 @@ public class CustomerService : ICustomerService
             "name" => isDescending
                                  ? query.OrderByDescending(t => t.Name)
                                  : query.OrderBy(t => t.Name),
+
+            "email" => isDescending
+                                ? query.OrderByDescending(t => t.Email)
+                                : query.OrderBy(t => t.Email),
 
             "createdat" => isDescending
                                 ? query.OrderByDescending(t => t.CreatedAt)
@@ -172,3 +166,4 @@ public class CustomerService : ICustomerService
         return _mapper.Map<CustomerResponseDto>(updatedCustomer);
     }
 }
+
